@@ -1,5 +1,7 @@
 # github-ci
-A simple server that manages CI pipelines for projects on GitHub.
+![version](https://img.shields.io/badge/version-0.1.1-blue.svg?cacheSeconds=2592000)
+
+A simple server that carries out CI pipelines for your projects on GitHub.
 
  1. [Install](#install)
  2. [Configure](#configure)
