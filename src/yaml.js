@@ -1,5 +1,5 @@
-yaml = require('js-yaml');
-fs = require('fs');
+const yaml = require('js-yaml');
+const fs = require('fs');
 
 module.exports = {
     load: (path) => {
