@@ -1,0 +1,29 @@
+{
+    "name": "github-ci",
+    "version": "0.1.0",
+    "description": "Simple CI server for GitHub projects",
+    "main": "index.js",
+    "scripts": {
+        "start": "./server.sh node",
+        "dev": "./server.sh nodemon"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/utkuufuk/github-ci.git"
+    },
+    "author": "Utku <utkuufuk@gmail.com>",
+    "license": "MIT",
+    "bugs": {
+        "url": "https://github.com/utkuufuk/github-ci/issues"
+    },
+    "homepage": "https://github.com/utkuufuk/github-ci#readme",
+    "dependencies": {
+        "axios": "^0.19.0",
+        "express": "^4.17.1",
+        "js-yaml": "^3.13.1",
+        "morgan": "^1.9.1"
+    },
+    "devDependencies": {
+        "nodemon": "^1.19.1"
+    }
+}
