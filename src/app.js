@@ -41,7 +41,7 @@ app.post(process.env.WEBHOOK_ENDPOINT_SUFFIX, (req, res) => {
             return;
         })
         // copy env file into project root
-        .then(() =>
+        .then(() => cfg.env &&
             shell(`cp ${process.env.WORK_DIR}/${cfg.env} ${process.env.WORK_DIR}/repo/${cfg.env}`)
         )
         // set all status checks as 'pending'
