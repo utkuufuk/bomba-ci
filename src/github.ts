@@ -1,12 +1,18 @@
-const axios = require('axios');
-const crypto = require('crypto');
+import axios from 'axios';
+import crypto from 'crypto';
+import express from 'express';
 
 const ENDPOINT =
     `https://api.github.com/repos/` +
     `${process.env.GITHUB_USER}/${process.env.GITHUB_REPO}/statuses`;
 const HEADERS = {Authorization: `token ${process.env.GITHUB_ACCESS_TOKEN}`};
 
-sendStatusCheck = (sha, state, context, description) => {
+export function sendStatusCheck(
+    sha: string,
+    state: string,
+    context: string,
+    description: string
+): Promise<void> {
     const payload = {
         state,
         context,
@@ -19,18 +25,13 @@ sendStatusCheck = (sha, state, context, description) => {
             .then(() => resolve())
             .catch((err) => reject(err));
     });
-};
+}
 
-verifyWebhookSignature = (req) => {
-    const signature = req.headers['x-hub-signature'];
+export function verifyWebhookSignature(req: express.Request) {
+    const signature = req.headers['x-hub-signature'] as string;
     const hash = crypto
-        .createHmac('sha1', process.env.WEBHOOK_SECRET)
+        .createHmac('sha1', process.env.WEBHOOK_SECRET!)
         .update(JSON.stringify(req.body))
         .digest('hex');
     return signature && signature.split('=')[1] !== hash;
-};
-
-module.exports = {
-    sendStatusCheck,
-    verifyWebhookSignature
-};
+}

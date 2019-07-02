@@ -1,15 +1,26 @@
-const express = require('express');
-const morgan = require('morgan');
+import express, {Request, Response, NextFunction} from 'express';
+import morgan from 'morgan';
+import yaml from 'js-yaml';
+import fs from 'fs';
 
-const github = require('./github');
-const shell = require('./shell');
-const yaml = require('./yaml');
+import * as github from './github';
+import exec from './exec';
+
+interface PipelineConfig {
+    env?: string;
+    build: Array<{name: string; command: string}>;
+}
+
+interface HttpException {
+    error: Error;
+    status: number;
+}
 
 const app = express();
 app.use(morgan('dev'));
 app.use(express.json());
 
-app.post(process.env.WEBHOOK_ENDPOINT_SUFFIX, (req, res) => {
+app.post(process.env.WEBHOOK_ENDPOINT_SUFFIX!, (req: Request, res: Response) => {
     // make sure that the webhook request is actually made by Github
     if (github.verifyWebhookSignature(req)) {
         return res.status(500).json({message: 'Webhook signature could not be verified.'});
@@ -26,23 +37,26 @@ app.post(process.env.WEBHOOK_ENDPOINT_SUFFIX, (req, res) => {
     res.send(`Started processing PR #${pr.number}: ${pr.url}`);
 
     // initialize & read CI config
-    let cfg = null;
-    let promise = shell(`rm -rf ${process.env.WORK_DIR}/repo`)
+    let cfg: PipelineConfig = {build: []};
+    let promise = exec(`rm -rf ${process.env.WORK_DIR}/repo`)
         // clone branch
         .then(() => {
             const cloneCmd =
                 `git clone --single-branch --branch ` +
                 `${pr.head.ref} ${pr.head.repo.ssh_url} ${process.env.WORK_DIR}/repo`;
-            return shell(cloneCmd);
+            return exec(cloneCmd);
         })
         // load 'github-ci.yml'
         .then(() => {
-            cfg = yaml.load(`${process.env.WORK_DIR}/repo/github-ci.yml`);
-            return;
+            const file = fs.readFileSync(`${process.env.WORK_DIR}/repo/github-ci.yml`, 'utf8');
+            cfg = yaml.safeLoad(file);
+            return cfg;
         })
         // copy env file into project root
-        .then(() => cfg.env &&
-            shell(`cp ${process.env.WORK_DIR}/${cfg.env} ${process.env.WORK_DIR}/repo/${cfg.env}`)
+        .then(({env}) =>
+            env === null
+                ? Promise.resolve()
+                : exec(`cp ${process.env.WORK_DIR}/${env} ${process.env.WORK_DIR}/repo/${env}`)
         )
         // set all status checks as 'pending'
         .then(() => github.sendStatusCheck(sha, 'pending', 'build', 'build tasks queued'))
@@ -62,7 +76,7 @@ app.post(process.env.WEBHOOK_ENDPOINT_SUFFIX, (req, res) => {
         for (let i = 0; i < cfg.build.length; i++) {
             const context = `build-${cfg.build[i].name}`;
             promise = promise
-                .then(() => shell(`cd ${process.env.WORK_DIR}/repo && ${cfg.build[i].command}`))
+                .then(() => exec(`cd ${process.env.WORK_DIR}/repo && ${cfg.build[i].command}`))
                 .then(() => github.sendStatusCheck(sha, 'success', context, 'build successful'))
                 .catch((err) => {
                     github.sendStatusCheck(sha, 'error', context, err.cmd || err).then(() => {
@@ -79,7 +93,7 @@ app.post(process.env.WEBHOOK_ENDPOINT_SUFFIX, (req, res) => {
                 });
             })
             .catch((err) => {
-                github.sendStatusCheck(sha, 'error', context, err.cmd || err).then(() => {
+                github.sendStatusCheck(sha, 'error', 'build', err.cmd || err).then(() => {
                     console.error(`Error occured during the build process: ${err}`);
                 });
             });
@@ -87,19 +101,21 @@ app.post(process.env.WEBHOOK_ENDPOINT_SUFFIX, (req, res) => {
 });
 
 // handle invalid routes
-app.use((req, res, next) => {
-    const error = new Error('Not found');
-    error.status = 404;
-    next(error);
+app.use((req, res, next: NextFunction) => {
+    const exception: HttpException = {
+        error: new Error('Not found'),
+        status: 404
+    };
+    next(exception);
 });
 
 // handle other errors
-app.use((error, req, res, next) => {
-    console.error(`Fatal error: ${error.message}`);
-    res.status(error.status || 500);
+app.use((exception: HttpException, req: Request, res: Response) => {
+    console.error(`Fatal error: ${exception.error.message}`);
+    res.status(exception.status || 500);
     res.json({
         error: {
-            message: error.message
+            message: exception.error.message
         }
     });
 });

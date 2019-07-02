@@ -1,9 +1,9 @@
-const exec = require('child_process').exec;
+import child_process from 'child_process';
 
-module.exports = (cmd) => {
+const exec = (cmd: string): Promise<void> => {
     console.log(`Running command: ${cmd}\n`);
     return new Promise((resolve, reject) => {
-        exec(cmd, {stdio: 'pipe'}, (error, stdout, stderr) => {
+        child_process.exec(cmd, (error, stdout, stderr) => {
             if (error) {
                 stderr && console.error(`Stderr:\n${stderr}`);
                 reject(error);
@@ -13,3 +13,5 @@ module.exports = (cmd) => {
         });
     });
 };
+
+export default exec;
