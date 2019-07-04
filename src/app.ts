@@ -40,14 +40,14 @@ app.post(process.env.WEBHOOK_ENDPOINT_SUFFIX!, async (req: Request, res: Respons
     let cfg: PipelineConfig = {build: []};
     try {
         await exec(`rm -rf ${process.env.WORK_DIR}/repo`);
-        const cloneCmd =
-            `git clone --single-branch --branch ` +
-            `${pr.head.ref} ${pr.head.repo.ssh_url} ${process.env.WORK_DIR}/repo`;
-        await exec(cloneCmd);
+        await exec(
+            `git clone --single-branch --branch \
+            ${pr.head.ref} ${pr.head.repo.ssh_url} ${process.env.WORK_DIR}/repo`
+        );
         const file = fs.readFileSync(`${process.env.WORK_DIR}/repo/github-ci.yml`, 'utf8');
         cfg = yaml.safeLoad(file);
 
-        if (cfg.env !== null) {
+        if (cfg.env) {
             await exec(
                 `cp ${process.env.WORK_DIR}/${cfg.env} ${process.env.WORK_DIR}/repo/${cfg.env}`
             );
@@ -74,13 +74,8 @@ app.post(process.env.WEBHOOK_ENDPOINT_SUFFIX!, async (req: Request, res: Respons
     }
 
     // set 'build' status check as 'success' after all components have been successfully built
-    try {
-        await github.sendStatusCheck(sha, 'success', 'build', 'build successful');
-        console.log(`Finished processing the PR: ${pr['url']}`);
-    } catch (err) {
-        await github.sendStatusCheck(sha, 'error', 'build', err.cmd || err);
-        console.error(`Error occured during the build process: ${err}`);
-    }
+    await github.sendStatusCheck(sha, 'success', 'build', 'build successful');
+    console.log(`Finished processing the PR: ${pr['url']}`);
 });
 
 // handle invalid routes
