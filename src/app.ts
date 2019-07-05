@@ -62,7 +62,9 @@ app.post(process.env.WEBHOOK_ENDPOINT_SUFFIX!, async (req: Request, res: Respons
             github.setStatus(repo, commit.sha, 'pending', `build-${item.name}`, 'build task queued')
         );
     } catch (err) {
-        await github.setStatus(repo, commit.sha, 'error', 'build', err.cmd || err);
+        await cfg.build.map((item) =>
+            github.setStatus(repo, commit.sha, 'error', `build-${item.name}`, err.cmd || err)
+        );
         console.error(`Error occured while initializing the CI process: ${err}`);
     }
 
