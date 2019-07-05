@@ -2,12 +2,18 @@ import axios from 'axios';
 import crypto from 'crypto';
 import express from 'express';
 
-const STATUS_ENDPOINT =
-    `https://api.github.com/repos/` +
-    `${process.env.GITHUB_USER}/${process.env.GITHUB_REPO}/statuses`;
 const HEADERS = {Authorization: `token ${process.env.GITHUB_ACCESS_TOKEN}`};
 
-const setStatus = async (sha: string, state: string, context: string, desc: string) => {
+const getEndpoint = (repoName: string, sha: string) =>
+    `https://api.github.com/repos/${repoName}/statuses/${sha}`;
+
+const setStatus = async (
+    repoName: string,
+    sha: string,
+    state: string,
+    context: string,
+    desc: string
+) => {
     const payload = {
         state,
         context,
@@ -16,7 +22,7 @@ const setStatus = async (sha: string, state: string, context: string, desc: stri
     };
 
     try {
-        await axios.post(`${STATUS_ENDPOINT}/${sha}`, payload, {headers: HEADERS});
+        await axios.post(`${getEndpoint(repoName, sha)}`, payload, {headers: HEADERS});
     } catch (err) {
         console.error(`Error occured while sending status check to GitHub: ${err}`);
     }
