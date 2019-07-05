@@ -1,5 +1,5 @@
 # Bomba CI
-![version](https://img.shields.io/badge/version-0.1.0-blue.svg?cacheSeconds=2592000)
+![version](https://img.shields.io/badge/version-0.2.0-blue.svg?cacheSeconds=2592000)
 
 A simple server that carries out CI pipelines for your projects on GitHub.
 
@@ -28,8 +28,6 @@ A simple server that carries out CI pipelines for your projects on GitHub.
 Create a file called `.env` inside the project directory which looks like the following:
 ``` env
 GITHUB_ACCESS_TOKEN=<token>
-GITHUB_REPO=<repo_name>
-GITHUB_USER=<user_name>
 WEBHOOK_ENDPOINT_PORT=<port_number>
 WEBHOOK_ENDPOINT_SUFFIX=<endpoint_suffix> # example: /webhooks/github
 WEBHOOK_SECRET=<webhook_secret>
@@ -48,10 +46,14 @@ build:
 ```
 
 #### Environment File
-If there is an environment file that's not tracked by Git, its name must be specified using the `env` keyword in the `bomba.yml` file. Also it has to be placed inside the `WORK_DIR` directory in the host machine.
+If there is an environment file that's not tracked by Git and required during the CI process, its name must be specified using the `env` keyword in the `bomba.yml` file. Also it has to be copied beforehand into `<WORK_DIR>` in the host machine.
+
+For this repo, for instance, if `WORK_DIR` is `/home/utku/bomba`, then the absolute path for this file has to be `/home/utku/bomba/.utkuufuk_bomba-ci`
 
 #### Build Dependencies
-Any dependencies for building/testing the target project has to be installed in the host machine that the server is to be deployed. For the example above, both `Docker` and `docker-compose` has to be installed alongside the server.
+Any dependencies for building/testing the target project has to be installed in the host machine that `bomba-ci` is going to be deployed. 
+
+As an example, `Docker` has to be be pre-installed in the host machine if a project is meant to be built and/or tested using `Docker` during the CI process.
 
 ## Launch
 ``` sh
