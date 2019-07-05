@@ -2,6 +2,13 @@ import axios from 'axios';
 import crypto from 'crypto';
 import express from 'express';
 
+interface Status {
+    state: string;
+    context?: string;
+    description?: string;
+    target_url?: string;
+}
+
 const HEADERS = {Authorization: `token ${process.env.GITHUB_ACCESS_TOKEN}`};
 
 const getEndpoint = (repoName: string, sha: string) =>
@@ -12,12 +19,13 @@ const setStatus = async (
     sha: string,
     state: string,
     context: string,
-    desc: string
+    description: string
 ) => {
-    const payload = {
+    const timestamp = new Date();
+    const payload: Status = {
         state,
         context,
-        desc,
+        description: `${timestamp}: ${description}`,
         target_url: 'https://http.cat/503'
     };
 
