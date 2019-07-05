@@ -25,7 +25,7 @@ const setStatus = async (
     const payload: Status = {
         state,
         context,
-        description: `${timestamp.toISOString().substring(0, 19)} &mdash; ${description}`,
+        description: `${timestamp.toISOString().substring(0, 19)} — ${description}`,
         target_url: 'https://http.cat/503'
     };
 
