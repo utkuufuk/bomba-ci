@@ -1,10 +1,16 @@
 import express, {Request, Response, NextFunction} from 'express';
+import fs from 'fs';
 import morgan from 'morgan';
 import yaml from 'js-yaml';
-import fs from 'fs';
 
-import * as github from './github';
+import github from './github';
 import exec from './exec';
+
+const getRepoPath = (repo: string) => `${process.env.WORK_DIR}/${repo}`;
+const getConfigFilePath = (repo: string) => `${getRepoPath(repo)}/bomba.yml`;
+const getSourceEnvFilePath = (repo: string) => `${process.env.WORK_DIR}/.${repo.replace('/', '_')}`;
+const getTargetEnvFilePath = (repo: string, envFileName: string) =>
+    `${getRepoPath(repo)}/${envFileName}`;
 
 interface PipelineConfig {
     env?: string;
@@ -31,33 +37,32 @@ app.post(process.env.WEBHOOK_ENDPOINT_SUFFIX!, async (req: Request, res: Respons
         return res.send({message: 'Ignoring event types other than pull requests.'});
     }
 
-    // send ACK response before starting the CI process
+    // cache pull request, commit & branch info
     const pr = req.body.pull_request;
-    const sha = pr.head.sha;
+    const commit = pr.head;
+    const repo = commit.repo.full_name;
+    const branch = commit.ref;
+
+    // send ACK response before starting the CI process
     res.send(`Started processing PR #${pr.number}: ${pr.url}`);
 
     // initialize & read CI config
     let cfg: PipelineConfig = {build: []};
     try {
-        await exec(`rm -rf ${process.env.WORK_DIR}/repo`);
+        await exec(`rm -rf ${getRepoPath(repo)}`);
         await exec(
-            `git clone --single-branch --branch \
-            ${pr.head.ref} ${pr.head.repo.ssh_url} ${process.env.WORK_DIR}/repo`
+            `git clone --single-branch -b ${branch} ${commit.repo.ssh_url} ${getRepoPath(repo)}`
         );
-        const file = fs.readFileSync(`${process.env.WORK_DIR}/repo/bomba.yml`, 'utf8');
+        const file = fs.readFileSync(`${getConfigFilePath(repo)}`, 'utf8');
         cfg = yaml.safeLoad(file);
-
         if (cfg.env) {
-            await exec(
-                `cp ${process.env.WORK_DIR}/${cfg.env} ${process.env.WORK_DIR}/repo/${cfg.env}`
-            );
+            await exec(`cp ${getSourceEnvFilePath(repo)} ${getTargetEnvFilePath(repo, cfg.env)}`);
         }
-        await github.sendStatusCheck(sha, 'pending', 'build', 'build tasks queued');
         await cfg.build.map((item) =>
-            github.sendStatusCheck(sha, 'pending', `build-${item.name}`, 'build task queued')
+            github.setStatus(repo, commit.sha, 'pending', `build-${item.name}`, 'build task queued')
         );
     } catch (err) {
-        await github.sendStatusCheck(sha, 'error', 'build', err.cmd || err);
+        await github.setStatus(repo, commit.sha, 'error', 'build', err.cmd || err);
         console.error(`Error occured while initializing the CI process: ${err}`);
     }
 
@@ -65,17 +70,14 @@ app.post(process.env.WEBHOOK_ENDPOINT_SUFFIX!, async (req: Request, res: Respons
     for (let i = 0; i < cfg.build.length; i++) {
         const context = `build-${cfg.build[i].name}`;
         try {
-            await exec(`cd ${process.env.WORK_DIR}/repo && ${cfg.build[i].command}`);
-            await github.sendStatusCheck(sha, 'success', context, 'build successful');
+            await exec(`cd ${getRepoPath(repo)} && ${cfg.build[i].command}`);
+            await github.setStatus(repo, commit.sha, 'success', context, 'build successful');
         } catch (err) {
-            await github.sendStatusCheck(sha, 'error', context, err.cmd || err);
+            await github.setStatus(repo, commit.sha, 'error', context, err.cmd || err);
             console.error(`Error occured while building ${cfg.build[i].name}: ${err}`);
         }
     }
-
-    // set 'build' status check as 'success' after all components have been successfully built
-    await github.sendStatusCheck(sha, 'success', 'build', 'build successful');
-    console.log(`Finished processing the PR: ${pr['url']}`);
+    console.log(`Finished processing PR: ${pr['url']}`);
 });
 
 // handle invalid routes
