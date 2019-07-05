@@ -11,7 +11,7 @@ A simple server that carries out CI pipelines for your projects on GitHub.
  1. [Install Node.js](https://nodejs.org/en/)
  2. [Create a personal access token on GitHub](https://help.github.com/en/articles/creating-a-personal-access-token-for-the-command-line#creating-a-token)
  3. Pick a secure webhook secret.
- 4. Create a file called `.env` inside the project directory which looks like the following:
+ 4. Create a file called `.env` inside the project directory in the following format:
    ``` env
    GITHUB_ACCESS_TOKEN=<token>
    WEBHOOK_ENDPOINT_PORT=<port_number>
@@ -49,7 +49,7 @@ build:
 ### Environment File
 If there's an environment file that's not tracked by Git but required during the CI process, its name must be specified using the `env` keyword in `bomba.yml`. Also it has to be copied beforehand into `<WORK_DIR>` in the host machine.
 
-For instance, if `WORK_DIR` is `/home/utku/bomba`, then the absolute path for this file has to be `/home/utku/bomba/.utkuufuk_bomba-ci` for this repository.
+For instance, if `WORK_DIR` is `/home/utku/bombaci`, then the absolute path for this file has to be `/home/utku/bombaci/.utkuufuk_bomba-ci` for this repository.
 
 ### Dependencies
 Any dependencies for building/testing the target project has to be installed in the host machine that `bomba-ci` is going to be deployed. 
@@ -62,7 +62,7 @@ Install dependencies:
 npm install
 ```
 
-Launch in development or production mode:
+Start server
 ``` sh
 # development mode
 npm run dev
@@ -71,7 +71,7 @@ npm run dev
 npm start
 ```
 
-Stop:
+Stop server:
 ``` sh
 npm stop
 ```
