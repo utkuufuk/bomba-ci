@@ -1,12 +1,13 @@
 import axios from 'axios';
 import crypto from 'crypto';
 import express from 'express';
+import timestamp from './timestamp';
 
 interface Status {
     state: string;
-    context?: string;
-    description?: string;
-    target_url?: string;
+    context: string;
+    description: string;
+    target_url: string;
 }
 
 const HEADERS = {Authorization: `token ${process.env.GITHUB_ACCESS_TOKEN}`};
@@ -20,13 +21,13 @@ const setStatus = async (
     state: string,
     context: string,
     description: string,
-    logFileName: string
+    fileName: string
 ) => {
     const payload: Status = {
         state,
         context,
-        description: `${new Date().toISOString().substring(0, 19)} — ${description}`,
-        target_url: `http://${process.env.SERVER_IP}:${process.env.WEBHOOK_ENDPOINT_PORT}/logs/${logFileName}.log`
+        description: `${timestamp()} — ${description}`,
+        target_url: `http://${process.env.HOST_IP}:${process.env.SERVER_PORT}/logs/${fileName}.log`
     };
 
     try {
