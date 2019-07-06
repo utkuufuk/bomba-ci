@@ -1,12 +1,12 @@
 {
     "name": "bomba-ci",
-    "version": "0.3.0",
+    "version": "0.3.1",
     "description": "Simple CI server for GitHub projects",
     "main": "index.js",
     "scripts": {
-        "start": "npm run build && nohup ./server.sh node dist/app.js 2>&1 > server.log &",
+        "start": "npm run build && nohup ./start.sh node dist/app.js 2>&1 > /dev/null &",
         "stop": "./stop.sh",
-        "dev": "./server.sh nodemon src/app.ts",
+        "dev": "./start.sh nodemon src/app.ts",
         "build": "tsc -p ."
     },
     "repository": {
