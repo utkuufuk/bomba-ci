@@ -95,7 +95,7 @@ app.post(process.env.WEBHOOK_ENDPOINT_SUFFIX!, async (req: Request, res: Respons
                     commit.sha,
                     'error',
                     `build-${item.name}`,
-                    err.cmd || err,
+                    `build could not be started`,
                     logFileName
                 )
         );
@@ -106,7 +106,7 @@ app.post(process.env.WEBHOOK_ENDPOINT_SUFFIX!, async (req: Request, res: Respons
                     commit.sha,
                     'error',
                     `test-${item.name}`,
-                    err.cmd || err,
+                    `test could not be started`,
                     logFileName
                 )
         );
@@ -127,7 +127,7 @@ app.post(process.env.WEBHOOK_ENDPOINT_SUFFIX!, async (req: Request, res: Respons
                 logFileName
             );
         } catch (err) {
-            await github.setStatus(repo, commit.sha, 'error', context, err.cmd || err, logFileName);
+            await github.setStatus(repo, commit.sha, 'error', context, `build failed`, logFileName);
             log.error(`Error occured while building ${cfg.build[i].name}: ${err}`);
         }
     }
@@ -146,8 +146,8 @@ app.post(process.env.WEBHOOK_ENDPOINT_SUFFIX!, async (req: Request, res: Respons
                 logFileName
             );
         } catch (err) {
-            await github.setStatus(repo, commit.sha, 'error', context, err.cmd || err, logFileName);
             log.error(`Error occured while testing ${cfg.test[i].name}: ${err}`);
+            await github.setStatus(repo, commit.sha, 'error', context, `test failed`, logFileName);
         }
     }
     log.info(`Finished processing PR: ${pr['url']}`);
