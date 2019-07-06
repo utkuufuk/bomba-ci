@@ -16,6 +16,7 @@ const getTargetEnvFilePath = (repo: string, envFileName: string) =>
 interface PipelineConfig {
     env?: string;
     build: Array<{name: string; command: string}>;
+    test: Array<{name: string; command: string}>;
 }
 
 interface HttpException {
@@ -52,7 +53,7 @@ app.post(process.env.WEBHOOK_ENDPOINT_SUFFIX!, async (req: Request, res: Respons
     res.send(`Started processing PR #${pr.number}: ${pr.url}`);
 
     // initialize & read CI config
-    let cfg: PipelineConfig = {build: []};
+    let cfg: PipelineConfig = {build: [], test: []};
     try {
         await exec(`rm -rf ${getRepoPath(repo)}`);
         await exec(
@@ -104,6 +105,25 @@ app.post(process.env.WEBHOOK_ENDPOINT_SUFFIX!, async (req: Request, res: Respons
         } catch (err) {
             await github.setStatus(repo, commit.sha, 'error', context, err.cmd || err, logFileName);
             log.error(`Error occured while building ${cfg.build[i].name}: ${err}`);
+        }
+    }
+
+    // test components one by one
+    for (let i = 0; i < cfg.test.length; i++) {
+        const context = `test-${cfg.test[i].name}`;
+        try {
+            await exec(`cd ${getRepoPath(repo)} && ${cfg.test[i].command}`);
+            await github.setStatus(
+                repo,
+                commit.sha,
+                'success',
+                context,
+                'test successful',
+                logFileName
+            );
+        } catch (err) {
+            await github.setStatus(repo, commit.sha, 'error', context, err.cmd || err, logFileName);
+            log.error(`Error occured while testing ${cfg.test[i].name}: ${err}`);
         }
     }
     log.info(`Finished processing PR: ${pr['url']}`);
