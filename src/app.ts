@@ -4,7 +4,7 @@ import yaml from 'js-yaml';
 
 import exec from './exec';
 import github from './github';
-import log from './log';
+import log, {setLogFile} from './log';
 
 const getRepoPath = (repo: string) => `${process.env.WORK_DIR}/${repo}`;
 const getConfigFilePath = (repo: string) => `${getRepoPath(repo)}/bomba.yml`;
@@ -41,6 +41,9 @@ app.post(process.env.WEBHOOK_ENDPOINT_SUFFIX!, async (req: Request, res: Respons
     const commit = pr.head;
     const repo = commit.repo.full_name;
     const branch = commit.ref;
+
+    // select a timestamped log file name based on current repo and branch names
+    setLogFile(`${repo}-${branch}-${new Date().toISOString().substring(0, 19)}`);
 
     // send ACK response before starting the CI process
     res.send(`Started processing PR #${pr.number}: ${pr.url}`);

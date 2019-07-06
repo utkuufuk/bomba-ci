@@ -21,11 +21,10 @@ const setStatus = async (
     context: string,
     description: string
 ) => {
-    const timestamp = new Date();
     const payload: Status = {
         state,
         context,
-        description: `${timestamp.toISOString().substring(0, 19)} — ${description}`,
+        description: `${new Date().toISOString().substring(0, 19)} — ${description}`,
         target_url: 'https://http.cat/503'
     };
 
