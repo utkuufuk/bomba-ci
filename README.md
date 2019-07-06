@@ -1,5 +1,5 @@
 # Bomba CI
-![version](https://img.shields.io/badge/version-0.2.1-blue.svg?cacheSeconds=2592000)
+![version](https://img.shields.io/badge/version-0.3.0-blue.svg?cacheSeconds=2592000)
 
 A simple server that carries out CI pipelines for your projects on GitHub.
 

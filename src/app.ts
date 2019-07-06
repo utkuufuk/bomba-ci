@@ -1,10 +1,10 @@
 import express, {Request, Response, NextFunction} from 'express';
 import fs from 'fs';
-import morgan from 'morgan';
 import yaml from 'js-yaml';
 
-import github from './github';
 import exec from './exec';
+import github from './github';
+import log from './log';
 
 const getRepoPath = (repo: string) => `${process.env.WORK_DIR}/${repo}`;
 const getConfigFilePath = (repo: string) => `${getRepoPath(repo)}/bomba.yml`;
@@ -23,7 +23,6 @@ interface HttpException {
 }
 
 const app = express();
-app.use(morgan('dev'));
 app.use(express.json());
 
 app.post(process.env.WEBHOOK_ENDPOINT_SUFFIX!, async (req: Request, res: Response) => {
@@ -65,7 +64,7 @@ app.post(process.env.WEBHOOK_ENDPOINT_SUFFIX!, async (req: Request, res: Respons
         await cfg.build.map((item) =>
             github.setStatus(repo, commit.sha, 'error', `build-${item.name}`, err.cmd || err)
         );
-        console.error(`Error occured while initializing the CI process: ${err}`);
+        log.error(`Error occured while initializing the CI process: ${err}`);
         return;
     }
 
@@ -77,10 +76,10 @@ app.post(process.env.WEBHOOK_ENDPOINT_SUFFIX!, async (req: Request, res: Respons
             await github.setStatus(repo, commit.sha, 'success', context, 'build successful');
         } catch (err) {
             await github.setStatus(repo, commit.sha, 'error', context, err.cmd || err);
-            console.error(`Error occured while building ${cfg.build[i].name}: ${err}`);
+            log.error(`Error occured while building ${cfg.build[i].name}: ${err}`);
         }
     }
-    console.log(`Finished processing PR: ${pr['url']}`);
+    log.info(`Finished processing PR: ${pr['url']}`);
 });
 
 // handle invalid routes
@@ -94,7 +93,7 @@ app.use((req, res, next: NextFunction) => {
 
 // handle other errors
 app.use((exception: HttpException, req: Request, res: Response) => {
-    console.error(`Fatal error: ${exception.error.message}`);
+    log.error(`Fatal error: ${exception.error.message}`);
     res.status(exception.status || 500);
     res.json({
         error: {
@@ -104,5 +103,5 @@ app.use((exception: HttpException, req: Request, res: Response) => {
 });
 
 app.listen(process.env.WEBHOOK_ENDPOINT_PORT, () =>
-    console.log(`Server started on port ${process.env.WEBHOOK_ENDPOINT_PORT}`)
+    log.info(`Server started on port ${process.env.WEBHOOK_ENDPOINT_PORT}`)
 );
