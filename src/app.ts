@@ -64,28 +64,52 @@ app.post(process.env.WEBHOOK_ENDPOINT_SUFFIX!, async (req: Request, res: Respons
         if (cfg.env) {
             await exec(`cp ${getSourceEnvFilePath(repo)} ${getTargetEnvFilePath(repo, cfg.env)}`);
         }
-        await cfg.build.map((item) =>
-            github.setStatus(
-                repo,
-                commit.sha,
-                'pending',
-                `build-${item.name}`,
-                'build task queued',
-                logFileName
-            )
+        cfg.build.forEach(
+            async (item) =>
+                await github.setStatus(
+                    repo,
+                    commit.sha,
+                    'pending',
+                    `build-${item.name}`,
+                    'build task queued',
+                    logFileName
+                )
+        );
+        cfg.test.forEach(
+            async (item) =>
+                await github.setStatus(
+                    repo,
+                    commit.sha,
+                    'pending',
+                    `test-${item.name}`,
+                    'test task queued',
+                    logFileName
+                )
         );
     } catch (err) {
-        await cfg.build.map((item) =>
-            github.setStatus(
-                repo,
-                commit.sha,
-                'error',
-                `build-${item.name}`,
-                err.cmd || err,
-                logFileName
-            )
-        );
         log.error(`Error occured while initializing the CI process: ${err}`);
+        cfg.build.forEach(
+            async (item) =>
+                await github.setStatus(
+                    repo,
+                    commit.sha,
+                    'error',
+                    `build-${item.name}`,
+                    err.cmd || err,
+                    logFileName
+                )
+        );
+        cfg.test.forEach(
+            async (item) =>
+                await github.setStatus(
+                    repo,
+                    commit.sha,
+                    'error',
+                    `test-${item.name}`,
+                    err.cmd || err,
+                    logFileName
+                )
+        );
         return;
     }
 
