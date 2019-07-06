@@ -1,14 +1,15 @@
 import child_process from 'child_process';
+import log from './log';
 
 const exec = (cmd: string): Promise<void> => {
-    console.log(`Running command: ${cmd}\n`);
+    log.info(`Running command: ${cmd}\n`);
     return new Promise((resolve, reject) => {
         child_process.exec(cmd, (error, stdout, stderr) => {
             if (error) {
-                stderr && console.error(`Stderr:\n${stderr}`);
+                stderr && log.error(stderr);
                 reject(error);
             }
-            stdout && console.log(`Stdout:\n${stdout}`);
+            stdout && log.info(stdout);
             resolve();
         });
     });

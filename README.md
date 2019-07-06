@@ -1,5 +1,5 @@
 # Bomba CI
-![version](https://img.shields.io/badge/version-0.2.1-blue.svg?cacheSeconds=2592000)
+![version](https://img.shields.io/badge/version-0.3.0-blue.svg?cacheSeconds=2592000)
 
 A simple server that carries out CI pipelines for your projects on GitHub.
 
@@ -14,7 +14,8 @@ A simple server that carries out CI pipelines for your projects on GitHub.
  4. Create a file called `.env` inside the project directory in the following format:
    ``` env
    GITHUB_ACCESS_TOKEN=<token>
-   WEBHOOK_ENDPOINT_PORT=<port_number>
+   HOST_IP=<ip_address>
+   SERVER_PORT=<port_number>
    WEBHOOK_ENDPOINT_SUFFIX=<endpoint_suffix> # example: /webhooks/github
    WEBHOOK_SECRET=<webhook_secret>
    WORK_DIR=<absolute_path> # example: /home/utku/bombaci

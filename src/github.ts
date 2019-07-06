@@ -1,12 +1,13 @@
 import axios from 'axios';
 import crypto from 'crypto';
 import express from 'express';
+import timestamp from './timestamp';
 
 interface Status {
     state: string;
-    context?: string;
-    description?: string;
-    target_url?: string;
+    context: string;
+    description: string;
+    target_url: string;
 }
 
 const HEADERS = {Authorization: `token ${process.env.GITHUB_ACCESS_TOKEN}`};
@@ -19,14 +20,14 @@ const setStatus = async (
     sha: string,
     state: string,
     context: string,
-    description: string
+    description: string,
+    fileName: string
 ) => {
-    const timestamp = new Date();
     const payload: Status = {
         state,
         context,
-        description: `${timestamp.toISOString().substring(0, 19)} — ${description}`,
-        target_url: 'https://http.cat/503'
+        description: `${timestamp()} — ${description}`,
+        target_url: `http://${process.env.HOST_IP}:${process.env.SERVER_PORT}/logs/${fileName}.log`
     };
 
     try {
