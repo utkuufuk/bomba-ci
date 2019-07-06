@@ -24,6 +24,7 @@ interface HttpException {
 
 const app = express();
 app.use(express.json());
+app.use("/logs", express.static('logs'));
 
 app.post(process.env.WEBHOOK_ENDPOINT_SUFFIX!, async (req: Request, res: Response) => {
     // make sure that the webhook request is actually made by Github
@@ -43,7 +44,8 @@ app.post(process.env.WEBHOOK_ENDPOINT_SUFFIX!, async (req: Request, res: Respons
     const branch = commit.ref;
 
     // select a timestamped log file name based on current repo and branch names
-    setLogFile(`${repo}-${branch}-${new Date().toISOString().substring(0, 19)}`);
+    const logFileName = `${new Date().toISOString().substring(0, 19)}-${repo.replace('/', '_')}-${pr.number}`;
+    setLogFile(logFileName);
 
     // send ACK response before starting the CI process
     res.send(`Started processing PR #${pr.number}: ${pr.url}`);
@@ -61,11 +63,11 @@ app.post(process.env.WEBHOOK_ENDPOINT_SUFFIX!, async (req: Request, res: Respons
             await exec(`cp ${getSourceEnvFilePath(repo)} ${getTargetEnvFilePath(repo, cfg.env)}`);
         }
         await cfg.build.map((item) =>
-            github.setStatus(repo, commit.sha, 'pending', `build-${item.name}`, 'build task queued')
+            github.setStatus(repo, commit.sha, 'pending', `build-${item.name}`, 'build task queued', logFileName)
         );
     } catch (err) {
         await cfg.build.map((item) =>
-            github.setStatus(repo, commit.sha, 'error', `build-${item.name}`, err.cmd || err)
+            github.setStatus(repo, commit.sha, 'error', `build-${item.name}`, err.cmd || err, logFileName)
         );
         log.error(`Error occured while initializing the CI process: ${err}`);
         return;
@@ -76,9 +78,9 @@ app.post(process.env.WEBHOOK_ENDPOINT_SUFFIX!, async (req: Request, res: Respons
         const context = `build-${cfg.build[i].name}`;
         try {
             await exec(`cd ${getRepoPath(repo)} && ${cfg.build[i].command}`);
-            await github.setStatus(repo, commit.sha, 'success', context, 'build successful');
+            await github.setStatus(repo, commit.sha, 'success', context, 'build successful', logFileName);
         } catch (err) {
-            await github.setStatus(repo, commit.sha, 'error', context, err.cmd || err);
+            await github.setStatus(repo, commit.sha, 'error', context, err.cmd || err, logFileName);
             log.error(`Error occured while building ${cfg.build[i].name}: ${err}`);
         }
     }

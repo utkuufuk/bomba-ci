@@ -19,13 +19,14 @@ const setStatus = async (
     sha: string,
     state: string,
     context: string,
-    description: string
+    description: string,
+    logFileName: string
 ) => {
     const payload: Status = {
         state,
         context,
         description: `${new Date().toISOString().substring(0, 19)} — ${description}`,
-        target_url: 'https://http.cat/503'
+        target_url: `http://${process.env.SERVER_IP}:${process.env.WEBHOOK_ENDPOINT_PORT}/logs/${logFileName}.log`
     };
 
     try {
