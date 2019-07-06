@@ -1,5 +1,5 @@
 # Bomba CI
-![version](https://img.shields.io/badge/version-0.3.0-blue.svg?cacheSeconds=2592000)
+![version](https://img.shields.io/badge/version-0.3.2-blue.svg?cacheSeconds=2592000)
 
 A simple server that carries out CI pipelines for your projects on GitHub.
 
@@ -70,6 +70,11 @@ npm run dev
 
 # production mode (background process)
 npm start
+```
+
+Check server process:
+``` sh
+npm run check
 ```
 
 Stop server:
