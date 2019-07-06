@@ -1,10 +1,10 @@
-import express, {Request, Response, NextFunction} from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import fs from 'fs';
 import yaml from 'js-yaml';
 
 import exec from './exec';
 import github from './github';
-import log, {setLogFile} from './log';
+import log, { setLogFile } from './log';
 import timestamp from './timestamp';
 
 const getRepoPath = (repo: string) => `${process.env.WORK_DIR}/${repo}`;
@@ -15,8 +15,8 @@ const getTargetEnvFilePath = (repo: string, envFileName: string) =>
 
 interface PipelineConfig {
     env?: string;
-    build: Array<{name: string; command: string}>;
-    test: Array<{name: string; command: string}>;
+    build: Array<{ name: string; command: string }>;
+    test: Array<{ name: string; command: string }>;
 }
 
 interface HttpException {
@@ -31,12 +31,12 @@ app.use('/logs', express.static('logs'));
 app.post(process.env.WEBHOOK_ENDPOINT_SUFFIX!, async (req: Request, res: Response) => {
     // make sure that the webhook request is actually made by Github
     if (github.verifyWebhookSignature(req)) {
-        return res.status(500).json({message: 'Webhook signature could not be verified.'});
+        return res.status(500).json({ message: 'Webhook signature could not be verified.' });
     }
 
     // ignore events other than pull requests
     if (req.headers['x-github-event'] !== 'pull_request') {
-        return res.send({message: 'Ignoring event types other than pull requests.'});
+        return res.send({ message: 'Ignoring event types other than pull requests.' });
     }
 
     // cache pull request, commit & branch info
@@ -53,7 +53,7 @@ app.post(process.env.WEBHOOK_ENDPOINT_SUFFIX!, async (req: Request, res: Respons
     res.send(`Started processing PR #${pr.number}: ${pr.url}`);
 
     // initialize & read CI config
-    let cfg: PipelineConfig = {build: [], test: []};
+    let cfg: PipelineConfig = { build: [], test: [] };
     try {
         await exec(`rm -rf ${getRepoPath(repo)}`);
         await exec(
@@ -64,7 +64,7 @@ app.post(process.env.WEBHOOK_ENDPOINT_SUFFIX!, async (req: Request, res: Respons
         if (cfg.env) {
             await exec(`cp ${getSourceEnvFilePath(repo)} ${getTargetEnvFilePath(repo, cfg.env)}`);
         }
-        cfg.build.forEach(
+        cfg.build && cfg.build.forEach(
             async (item) =>
                 await github.setStatus(
                     repo,
@@ -75,7 +75,7 @@ app.post(process.env.WEBHOOK_ENDPOINT_SUFFIX!, async (req: Request, res: Respons
                     logFileName
                 )
         );
-        cfg.test.forEach(
+        cfg.test && cfg.test.forEach(
             async (item) =>
                 await github.setStatus(
                     repo,
@@ -88,7 +88,7 @@ app.post(process.env.WEBHOOK_ENDPOINT_SUFFIX!, async (req: Request, res: Respons
         );
     } catch (err) {
         log.error(`Error occured while initializing the CI process: ${err}`);
-        cfg.build.forEach(
+        cfg.build && cfg.build.forEach(
             async (item) =>
                 await github.setStatus(
                     repo,
@@ -99,7 +99,7 @@ app.post(process.env.WEBHOOK_ENDPOINT_SUFFIX!, async (req: Request, res: Respons
                     logFileName
                 )
         );
-        cfg.test.forEach(
+        cfg.test && cfg.test.forEach(
             async (item) =>
                 await github.setStatus(
                     repo,
