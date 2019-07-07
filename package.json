@@ -1,6 +1,6 @@
 {
     "name": "bomba-ci",
-    "version": "0.4.1",
+    "version": "0.4.2",
     "description": "Simple CI server for GitHub projects",
     "main": "index.js",
     "scripts": {
