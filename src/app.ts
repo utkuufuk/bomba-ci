@@ -1,10 +1,10 @@
-import express, {Request, Response, NextFunction} from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import fs from 'fs';
 import yaml from 'js-yaml';
 
 import exec from './exec';
 import github from './github';
-import log, {setLogFile} from './log';
+import log, { setLogFile } from './log';
 import timestamp from './timestamp';
 
 const getRepoPath = (repo: string) => `${process.env.WORK_DIR}/${repo}`;
@@ -15,7 +15,8 @@ const getTargetEnvFilePath = (repo: string, envFileName: string) =>
 
 interface PipelineConfig {
     env?: string;
-    build: Array<{name: string; command: string}>;
+    build: Array<{ name: string; command: string }>;
+    test: Array<{ name: string; command: string }>;
 }
 
 interface HttpException {
@@ -30,12 +31,12 @@ app.use('/logs', express.static('logs'));
 app.post(process.env.WEBHOOK_ENDPOINT_SUFFIX!, async (req: Request, res: Response) => {
     // make sure that the webhook request is actually made by Github
     if (github.verifyWebhookSignature(req)) {
-        return res.status(500).json({message: 'Webhook signature could not be verified.'});
+        return res.status(500).json({ message: 'Webhook signature could not be verified.' });
     }
 
     // ignore events other than pull requests
     if (req.headers['x-github-event'] !== 'pull_request') {
-        return res.send({message: 'Ignoring event types other than pull requests.'});
+        return res.send({ message: 'Ignoring event types other than pull requests.' });
     }
 
     // cache pull request, commit & branch info
@@ -52,7 +53,7 @@ app.post(process.env.WEBHOOK_ENDPOINT_SUFFIX!, async (req: Request, res: Respons
     res.send(`Started processing PR #${pr.number}: ${pr.url}`);
 
     // initialize & read CI config
-    let cfg: PipelineConfig = {build: []};
+    let cfg: PipelineConfig = { build: [], test: [] };
     try {
         await exec(`rm -rf ${getRepoPath(repo)}`);
         await exec(
@@ -63,33 +64,57 @@ app.post(process.env.WEBHOOK_ENDPOINT_SUFFIX!, async (req: Request, res: Respons
         if (cfg.env) {
             await exec(`cp ${getSourceEnvFilePath(repo)} ${getTargetEnvFilePath(repo, cfg.env)}`);
         }
-        await cfg.build.map((item) =>
-            github.setStatus(
-                repo,
-                commit.sha,
-                'pending',
-                `build-${item.name}`,
-                'build task queued',
-                logFileName
-            )
+        cfg.build && cfg.build.forEach(
+            async (item) =>
+                await github.setStatus(
+                    repo,
+                    commit.sha,
+                    'pending',
+                    `build-${item.name}`,
+                    'build task queued',
+                    logFileName
+                )
+        );
+        cfg.test && cfg.test.forEach(
+            async (item) =>
+                await github.setStatus(
+                    repo,
+                    commit.sha,
+                    'pending',
+                    `test-${item.name}`,
+                    'test task queued',
+                    logFileName
+                )
         );
     } catch (err) {
-        await cfg.build.map((item) =>
-            github.setStatus(
-                repo,
-                commit.sha,
-                'error',
-                `build-${item.name}`,
-                err.cmd || err,
-                logFileName
-            )
-        );
         log.error(`Error occured while initializing the CI process: ${err}`);
+        cfg.build && cfg.build.forEach(
+            async (item) =>
+                await github.setStatus(
+                    repo,
+                    commit.sha,
+                    'error',
+                    `build-${item.name}`,
+                    `build could not be started`,
+                    logFileName
+                )
+        );
+        cfg.test && cfg.test.forEach(
+            async (item) =>
+                await github.setStatus(
+                    repo,
+                    commit.sha,
+                    'error',
+                    `test-${item.name}`,
+                    `test could not be started`,
+                    logFileName
+                )
+        );
         return;
     }
 
     // build components one by one
-    for (let i = 0; i < cfg.build.length; i++) {
+    for (let i = 0; i < (cfg.build ? cfg.build.length : 0); i++) {
         const context = `build-${cfg.build[i].name}`;
         try {
             await exec(`cd ${getRepoPath(repo)} && ${cfg.build[i].command}`);
@@ -102,8 +127,27 @@ app.post(process.env.WEBHOOK_ENDPOINT_SUFFIX!, async (req: Request, res: Respons
                 logFileName
             );
         } catch (err) {
-            await github.setStatus(repo, commit.sha, 'error', context, err.cmd || err, logFileName);
+            await github.setStatus(repo, commit.sha, 'error', context, `build failed`, logFileName);
             log.error(`Error occured while building ${cfg.build[i].name}: ${err}`);
+        }
+    }
+
+    // test components one by one
+    for (let i = 0; i < (cfg.test ? cfg.test.length : 0); i++) {
+        const context = `test-${cfg.test[i].name}`;
+        try {
+            await exec(`cd ${getRepoPath(repo)} && ${cfg.test[i].command}`);
+            await github.setStatus(
+                repo,
+                commit.sha,
+                'success',
+                context,
+                'test successful',
+                logFileName
+            );
+        } catch (err) {
+            log.error(`Error occured while testing ${cfg.test[i].name}: ${err}`);
+            await github.setStatus(repo, commit.sha, 'error', context, `test failed`, logFileName);
         }
     }
     log.info(`Finished processing PR: ${pr['url']}`);

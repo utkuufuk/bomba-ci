@@ -1,5 +1,5 @@
 # Bomba CI
-![version](https://img.shields.io/badge/version-0.3.2-blue.svg?cacheSeconds=2592000)
+![version](https://img.shields.io/badge/version-0.4.1-blue.svg?cacheSeconds=2592000)
 
 A simple server that carries out CI pipelines for your projects on GitHub.
 
@@ -45,6 +45,11 @@ build:
     command: "docker-compose build client"
   - name: server
     command: "docker-compose build server"
+  - name: db
+    command: "docker-compose build db"
+test:
+  - name: server
+    command: "docker-compose up -d db && docker-compose run server npm run test && docker-compose down"
 ```
 
 ### Environment File
