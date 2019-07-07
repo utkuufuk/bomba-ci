@@ -114,7 +114,7 @@ app.post(process.env.WEBHOOK_ENDPOINT_SUFFIX!, async (req: Request, res: Respons
     }
 
     // build components one by one
-    for (let i = 0; i < cfg.build.length; i++) {
+    for (let i = 0; i < (cfg.build ? cfg.build.length : 0); i++) {
         const context = `build-${cfg.build[i].name}`;
         try {
             await exec(`cd ${getRepoPath(repo)} && ${cfg.build[i].command}`);
@@ -133,7 +133,7 @@ app.post(process.env.WEBHOOK_ENDPOINT_SUFFIX!, async (req: Request, res: Respons
     }
 
     // test components one by one
-    for (let i = 0; i < cfg.test.length; i++) {
+    for (let i = 0; i < (cfg.test ? cfg.test.length : 0); i++) {
         const context = `test-${cfg.test[i].name}`;
         try {
             await exec(`cd ${getRepoPath(repo)} && ${cfg.test[i].command}`);
