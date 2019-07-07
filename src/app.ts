@@ -3,9 +3,8 @@ import fs from 'fs';
 import yaml from 'js-yaml';
 
 import exec from './exec';
-import github from './github';
+import github, {State} from './github';
 import log, {setLogFile} from './log';
-import {State} from './status';
 import timestamp from './timestamp';
 
 const repoPath = (repo: string) => `${process.env.WORK_DIR}/${repo}`;

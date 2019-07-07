@@ -3,9 +3,23 @@ import crypto from 'crypto';
 import express from 'express';
 
 import log from './log';
-import status, {State} from './status';
+import timestamp from './timestamp';
 
 const HEADERS = {Authorization: `token ${process.env.GITHUB_ACCESS_TOKEN}`};
+
+export enum State {
+    ERROR = 'error',
+    FAILURE = 'failure',
+    PENDING = 'pending',
+    SUCCESS = 'success'
+}
+
+const descriptions = {
+    [State.ERROR]: 'could not be started',
+    [State.FAILURE]: 'failed',
+    [State.PENDING]: 'queued',
+    [State.SUCCESS]: 'successful'
+};
 
 const getEndpoint = (repoName: string, sha: string) =>
     `https://api.github.com/repos/${repoName}/statuses/${sha}`;
@@ -20,7 +34,7 @@ const setStatus = async (
     const payload = {
         context,
         state,
-        description: status.getDescription(context, state),
+        description: `${timestamp()} — ${context} task ${descriptions[state]}`,
         target_url: `http://${process.env.HOST_IP}:${process.env.SERVER_PORT}/logs/${fileName}.log`
     };
 
