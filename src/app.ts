@@ -63,7 +63,6 @@ app.post(process.env.WEBHOOK_ENDPOINT_SUFFIX!, async (req: Request, res: Respons
         );
         const file = fs.readFileSync(`${repoPath(repo)}/bomba.yml`, 'utf8');
         cfg = yaml.safeLoad(file);
-        console.log(`Bomba.yml loaded:\n${cfg}`);
         if (cfg.env) {
             await exec(
                 `cp ${process.env.WORK_DIR}/.${repo.replace('/', '_')} ${repoPath(repo)}/${cfg.env}`

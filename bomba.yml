@@ -1,7 +1,5 @@
 env: '.env'
 build: 
-  initialize: echo hello
   steps:
     - name: server
       command: "npm install && npm run build"
-  finalize: echo goodbye
