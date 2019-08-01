@@ -1,5 +1,5 @@
 # Bomba CI
-![version](https://img.shields.io/badge/version-0.5.0-blue.svg?cacheSeconds=2592000)
+![version](https://img.shields.io/badge/version-0.5.1-blue.svg?cacheSeconds=2592000)
 
 A simple server that carries out CI pipelines for your projects on GitHub.
 
@@ -41,15 +41,19 @@ Create a file called `bomba.yml` which might look like the following:
 ``` yml
 env: '.env'
 build: 
-  - name: client
-    command: "docker-compose build client"
-  - name: server
-    command: "docker-compose build server"
-  - name: db
-    command: "docker-compose build db"
+  steps:
+    - name: client
+      command: "docker-compose build client"
+    - name: server
+      command: "docker-compose build server"
+    - name: db
+      command: "docker-compose build db"
 test:
-  - name: server
-    command: "docker-compose up -d db && docker-compose run server npm run test && docker-compose down"
+  initialize: "docker-compose up -d db"
+  steps:
+    - name: server
+      command: "docker-compose run server npm run test"
+  finalize: "docker-compose down"
 ```
 
 ### Environment File
