@@ -9,13 +9,19 @@ import timestamp from './timestamp';
 
 const repoPath = (repo: string) => `${process.env.WORK_DIR}/${repo}`;
 
-interface PipelineConfig {
-    env?: string;
-    build: Array<{name: string; command: string}>;
-    test: Array<{name: string; command: string}>;
+export interface IStage {
+    initialize?: string;
+    finalize?: string;
+    steps: Array<{name: string; command: string}>;
 }
 
-interface HttpException {
+interface IPipelineConfig {
+    env?: string;
+    build?: IStage;
+    test?: IStage;
+}
+
+interface IHttpException {
     error: Error;
     status: number;
 }
@@ -49,7 +55,7 @@ app.post(process.env.WEBHOOK_ENDPOINT_SUFFIX!, async (req: Request, res: Respons
     res.send(`Started processing PR #${pr.number}: ${pr.url}`);
 
     // initialize & read CI config
-    let cfg: PipelineConfig = {build: [], test: []};
+    let cfg: IPipelineConfig = {};
     try {
         await exec(`rm -rf ${repoPath(repo)}`);
         await exec(
@@ -62,44 +68,61 @@ app.post(process.env.WEBHOOK_ENDPOINT_SUFFIX!, async (req: Request, res: Respons
                 `cp ${process.env.WORK_DIR}/.${repo.replace('/', '_')} ${repoPath(repo)}/${cfg.env}`
             );
         }
-        github.batchStatus(repo, commit.sha, 'build', State.PENDING, cfg.build, logFileName);
-        github.batchStatus(repo, commit.sha, 'test', State.PENDING, cfg.test, logFileName);
+        github.batchStatus(repo, commit.sha, 'build', State.PENDING, cfg.build!, logFileName);
+        github.batchStatus(repo, commit.sha, 'test', State.PENDING, cfg.test!, logFileName);
     } catch (err) {
         log.error(`Error occured while initializing the CI process: ${err}`);
-        github.batchStatus(repo, commit.sha, 'build', State.ERROR, cfg.build, logFileName);
-        github.batchStatus(repo, commit.sha, 'test', State.ERROR, cfg.build, logFileName);
+        github.batchStatus(repo, commit.sha, 'build', State.ERROR, cfg.build!, logFileName);
+        github.batchStatus(repo, commit.sha, 'test', State.ERROR, cfg.test!, logFileName);
         return;
     }
 
-    // build each component
-    for (let i = 0; i < (cfg.build ? cfg.build.length : 0); i++) {
-        const context = `build-${cfg.build[i].name}`;
-        try {
-            await exec(`cd ${repoPath(repo)} && ${cfg.build[i].command}`);
-            await github.setStatus(repo, commit.sha, context, State.SUCCESS, logFileName);
-        } catch (err) {
-            log.error(`Error occured while building ${cfg.build[i].name}: ${err}`);
-            await github.setStatus(repo, commit.sha, context, State.FAILURE, logFileName);
+    if (cfg.build) {
+        // run initialization script for build stage
+        cfg.build.initialize && (await exec(`cd ${repoPath(repo)} && ${cfg.build.initialize}`));
+
+        // build each component
+        for (let i = 0; i < cfg.build.steps.length; i++) {
+            const context = `build-${cfg.build.steps[i].name}`;
+            try {
+                await exec(`cd ${repoPath(repo)} && ${cfg.build.steps[i].command}`);
+                await github.setStatus(repo, commit.sha, context, State.SUCCESS, logFileName);
+            } catch (err) {
+                log.error(`Error occured while building ${cfg.build.steps[i].name}: ${err}`);
+                await github.setStatus(repo, commit.sha, context, State.FAILURE, logFileName);
+            }
         }
+
+        // run finalization script for build stage
+        cfg.build.finalize && (await exec(`cd ${repoPath(repo)} && ${cfg.build.finalize}`));
     }
 
-    // test each component
-    for (let i = 0; i < (cfg.test ? cfg.test.length : 0); i++) {
-        const context = `test-${cfg.test[i].name}`;
-        try {
-            await exec(`cd ${repoPath(repo)} && ${cfg.test[i].command}`);
-            await github.setStatus(repo, commit.sha, context, State.SUCCESS, logFileName);
-        } catch (err) {
-            log.error(`Error occured while testing ${cfg.test[i].name}: ${err}`);
-            await github.setStatus(repo, commit.sha, context, State.FAILURE, logFileName);
+    if (cfg.test) {
+        // run initialization script for test stage
+        cfg.test.initialize && (await exec(`cd ${repoPath(repo)} && ${cfg.test.initialize}`));
+
+        // test each component
+        for (let i = 0; i < cfg.test.steps.length; i++) {
+            const context = `test-${cfg.test.steps[i].name}`;
+            try {
+                await exec(`cd ${repoPath(repo)} && ${cfg.test.steps[i].command}`);
+                await github.setStatus(repo, commit.sha, context, State.SUCCESS, logFileName);
+            } catch (err) {
+                log.error(`Error occured while testing ${cfg.test.steps[i].name}: ${err}`);
+                await github.setStatus(repo, commit.sha, context, State.FAILURE, logFileName);
+            }
         }
+
+        // run finalization script for test stage
+        cfg.test.finalize && (await exec(`cd ${repoPath(repo)} && ${cfg.test.finalize}`));
     }
+
     log.info(`CI pipeline completed for PR: ${pr['url']}`);
 });
 
 // handle invalid routes
 app.use((req, res, next: NextFunction) => {
-    const exception: HttpException = {
+    const exception: IHttpException = {
         error: new Error('Not found'),
         status: 404
     };
@@ -107,7 +130,7 @@ app.use((req, res, next: NextFunction) => {
 });
 
 // handle other errors
-app.use((exception: HttpException, req: Request, res: Response) => {
+app.use((exception: IHttpException, req: Request, res: Response) => {
     log.error(`Fatal error: ${exception.error.message}`);
     res.status(exception.status || 500);
     res.json({

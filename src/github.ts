@@ -2,6 +2,7 @@ import axios from 'axios';
 import crypto from 'crypto';
 import express from 'express';
 
+import {IStage} from './app';
 import log from './log';
 import timestamp from './timestamp';
 
@@ -50,13 +51,13 @@ const batchStatus = async (
     sha: string,
     context: string,
     state: State,
-    items: Array<{name: string}>,
+    stage: IStage,
     fileName: string
 ) => {
-    if (!items) {
+    if (!stage || !stage.steps) {
         return;
     }
-    await items.forEach(async (item) => {
+    await stage.steps.forEach(async (item) => {
         await setStatus(repo, sha, `${context}-${item.name}`, state, fileName);
     });
 };
