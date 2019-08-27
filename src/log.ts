@@ -1,6 +1,8 @@
 import {createLogger, format, transports} from 'winston';
 const {colorize, combine, timestamp, printf, simple} = format;
 
+let logFilePath = '';
+
 const logger = createLogger({
     level: 'info',
     format: combine(
@@ -16,9 +18,12 @@ const logger = createLogger({
 });
 
 export function setLogFile(filename: string) {
+    logFilePath = `logs/${filename}.log`;
     logger.clear();
-    logger.add(new transports.File({filename: `logs/${filename}.log`}));
+    logger.add(new transports.File({filename: logFilePath}));
     logger.add(new transports.Console({format: combine(colorize(), simple())}));
 }
+
+export const getLogFilePath = () => logFilePath;
 
 export default logger;

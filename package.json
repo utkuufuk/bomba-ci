@@ -1,6 +1,6 @@
 {
     "name": "bomba-ci",
-    "version": "0.5.1",
+    "version": "0.5.2",
     "description": "Simple CI server for GitHub projects",
     "main": "index.js",
     "scripts": {
@@ -27,9 +27,9 @@
         "winston": "^3.2.1"
     },
     "devDependencies": {
-        "@types/express": "^4.17.0",
+        "@types/express": "^4.17.1",
         "@types/js-yaml": "^3.12.1",
-        "@types/node": "^12.6.8",
+        "@types/node": "^12.7.2",
         "nodemon": "^1.19.1",
         "ts-node": "^8.3.0",
         "typescript": "^3.5.3"
